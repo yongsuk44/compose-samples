@@ -33,6 +33,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
+import coil.compose.AsyncImage
 import coil.compose.AsyncImagePainter
 import coil.compose.rememberAsyncImagePainter
 import coil.request.ImageRequest
@@ -59,6 +60,9 @@ fun PodcastImage(
         model = ImageRequest.Builder(LocalContext.current)
             .data(podcastImageUrl)
             .crossfade(true)
+            .memoryCacheKey(podcastImageUrl)
+            .placeholderMemoryCacheKey(podcastImageUrl)
+            .placeholder(R.drawable.img_empty)
             .build(),
         contentScale = contentScale,
         onState = { state -> imagePainterState = state }

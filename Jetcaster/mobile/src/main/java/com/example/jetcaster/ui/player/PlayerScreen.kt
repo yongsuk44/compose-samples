@@ -16,6 +16,7 @@
 
 package com.example.jetcaster.ui.player
 
+import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -98,8 +99,12 @@ import coil.request.ImageRequest
 import com.example.jetcaster.R
 import com.example.jetcaster.core.player.EpisodePlayerState
 import com.example.jetcaster.core.player.model.PlayerEpisode
+import com.example.jetcaster.ui.shared.EpisodeSharedElementKey
+import com.example.jetcaster.ui.shared.EpisodeSharedElementType
 import com.example.jetcaster.designsystem.component.HtmlTextContainer
 import com.example.jetcaster.designsystem.component.ImageBackgroundColorScrim
+import com.example.jetcaster.ui.shared.LocalNavAnimatedVisibilityScope
+import com.example.jetcaster.ui.shared.LocalSharedTransitionScope
 import com.example.jetcaster.ui.theme.JetcasterTheme
 import com.example.jetcaster.ui.tooling.DevicePreviews
 import com.example.jetcaster.util.isBookPosture
@@ -273,10 +278,10 @@ fun PlayerContent(
         // or we have an impactful horizontal fold. Otherwise, we'll use a horizontal strategy.
         val usingVerticalStrategy =
             isTableTopPosture(foldingFeature) ||
-                (
-                    isSeparatingPosture(foldingFeature) &&
-                        foldingFeature.orientation == FoldingFeature.Orientation.HORIZONTAL
-                    )
+                    (
+                            isSeparatingPosture(foldingFeature) &&
+                                    foldingFeature.orientation == FoldingFeature.Orientation.HORIZONTAL
+                            )
 
         if (usingVerticalStrategy) {
             TwoPane(
@@ -342,6 +347,7 @@ fun PlayerContent(
 /**
  * The UI for the top pane of a tabletop layout.
  */
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun PlayerContentRegular(
     uiState: PlayerUiState,
@@ -352,56 +358,118 @@ private fun PlayerContentRegular(
 ) {
     val playerEpisode = uiState.episodePlayerState
     val currentEpisode = playerEpisode.currentEpisode ?: return
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalGradientScrim(
-                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.50f),
-                startYPercentage = 1f,
-                endYPercentage = 0f
-            )
-            .systemBarsPadding()
-            .padding(horizontal = 8.dp)
-    ) {
-        TopAppBar(
-            onBackPress = onBackPress,
-            onAddToQueue = onAddToQueue,
-        )
+
+    val animatedVisibilityScope = LocalNavAnimatedVisibilityScope.current
+        ?: throw IllegalStateException("No AnimatedVisibilityScope")
+
+    val sharedTransitionScope = LocalSharedTransitionScope.current
+        ?: throw IllegalStateException("No SharedTransitionScope")
+
+    with(sharedTransitionScope) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(horizontal = 8.dp)
+            modifier = modifier
+                .fillMaxSize()
+                .verticalGradientScrim(
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.50f),
+                    startYPercentage = 1f,
+                    endYPercentage = 0f
+                )
+                .systemBarsPadding()
+                .padding(horizontal = 8.dp)
+                .sharedBounds(
+                    sharedContentState = rememberSharedContentState(
+                        key = EpisodeSharedElementKey(
+                            uri = currentEpisode.uri,
+                            type = EpisodeSharedElementType.BOUNDS
+                        )
+                    ),
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
         ) {
-            Spacer(modifier = Modifier.weight(1f))
-            PlayerImage(
-                podcastImageUrl = currentEpisode.podcastImageUrl,
-                modifier = Modifier.weight(10f)
+            TopAppBar(
+                onBackPress = onBackPress,
+                onAddToQueue = onAddToQueue,
             )
-            Spacer(modifier = Modifier.height(32.dp))
-            PodcastDescription(currentEpisode.title, currentEpisode.podcastName)
-            Spacer(modifier = Modifier.height(32.dp))
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.weight(10f)
+                modifier = Modifier.padding(horizontal = 8.dp)
             ) {
-                PlayerSlider(
-                    timeElapsed = playerEpisode.timeElapsed,
-                    episodeDuration = currentEpisode.duration,
-                    onSeekingStarted = playerControlActions.onSeekingStarted,
-                    onSeekingFinished = playerControlActions.onSeekingFinished
+                Spacer(modifier = Modifier.weight(1f))
+                PlayerImage(
+                    podcastImageUrl = currentEpisode.podcastImageUrl,
+                    modifier = Modifier
+                        .weight(10f)
+                        .sharedBounds(
+                            sharedContentState = rememberSharedContentState(
+                                key = EpisodeSharedElementKey(
+                                    uri = currentEpisode.podcastImageUrl,
+                                    type = EpisodeSharedElementType.IMAGE
+                                )
+                            ),
+                            animatedVisibilityScope = animatedVisibilityScope
+
+                        )
                 )
-                PlayerButtons(
-                    hasNext = playerEpisode.queue.isNotEmpty(),
-                    isPlaying = playerEpisode.isPlaying,
-                    onPlayPress = playerControlActions.onPlayPress,
-                    onPausePress = playerControlActions.onPausePress,
-                    onAdvanceBy = playerControlActions.onAdvanceBy,
-                    onRewindBy = playerControlActions.onRewindBy,
-                    onNext = playerControlActions.onNext,
-                    onPrevious = playerControlActions.onPrevious,
-                    Modifier.padding(vertical = 8.dp)
+                Spacer(modifier = Modifier.height(32.dp))
+//                PodcastDescription(currentEpisode.title, currentEpisode.podcastName)
+                Text(
+                    text = currentEpisode.title,
+                    style = MaterialTheme.typography.headlineSmall,
+                    maxLines = 1,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.basicMarquee()
+                        .sharedBounds(
+                            sharedContentState = rememberSharedContentState(
+                                key = EpisodeSharedElementKey(
+                                    uri = currentEpisode.uri,
+                                    type = EpisodeSharedElementType.TITLE
+                                )
+                            ),
+                            animatedVisibilityScope = animatedVisibilityScope
+
+                        )
                 )
+                Text(
+                    text = currentEpisode.podcastName,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    modifier = Modifier.sharedBounds(
+                        sharedContentState = rememberSharedContentState(
+                            key = EpisodeSharedElementKey(
+                                uri = currentEpisode.uri,
+                                type = EpisodeSharedElementType.PODCAST_TITLE
+                            )
+                        ),
+                        animatedVisibilityScope = animatedVisibilityScope
+
+                    )
+                )
+                Spacer(modifier = Modifier.height(32.dp))
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(10f)
+                ) {
+                    PlayerSlider(
+                        timeElapsed = playerEpisode.timeElapsed,
+                        episodeDuration = currentEpisode.duration,
+                        onSeekingStarted = playerControlActions.onSeekingStarted,
+                        onSeekingFinished = playerControlActions.onSeekingFinished
+                    )
+                    PlayerButtons(
+                        hasNext = playerEpisode.queue.isNotEmpty(),
+                        isPlaying = playerEpisode.isPlaying,
+                        onPlayPress = playerControlActions.onPlayPress,
+                        onPausePress = playerControlActions.onPausePress,
+                        onAdvanceBy = playerControlActions.onAdvanceBy,
+                        onRewindBy = playerControlActions.onRewindBy,
+                        onNext = playerControlActions.onNext,
+                        onPrevious = playerControlActions.onPrevious,
+                        Modifier.padding(vertical = 8.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.weight(1f))
             }
-            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
@@ -604,6 +672,8 @@ private fun PlayerImage(
         model = ImageRequest.Builder(LocalContext.current)
             .data(podcastImageUrl)
             .crossfade(true)
+            .memoryCacheKey(podcastImageUrl)
+            .placeholderMemoryCacheKey(podcastImageUrl)
             .build(),
         contentDescription = null,
         contentScale = ContentScale.Crop,

@@ -17,7 +17,11 @@
 package com.example.jetcaster.ui.shared
 
 import android.content.res.Configuration
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
@@ -40,8 +44,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -49,6 +56,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.jetcaster.R
 import com.example.jetcaster.core.domain.testing.PreviewEpisodes
 import com.example.jetcaster.core.domain.testing.PreviewPodcasts
@@ -57,10 +66,11 @@ import com.example.jetcaster.core.model.PodcastInfo
 import com.example.jetcaster.core.player.model.PlayerEpisode
 import com.example.jetcaster.designsystem.component.HtmlTextContainer
 import com.example.jetcaster.designsystem.component.PodcastImage
-import com.example.jetcaster.ui.theme.JetcasterTheme
+import com.example.jetcaster.ui.tooling.JetCasterPreviewWrapper
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun EpisodeListItem(
     episode: EpisodeInfo,
@@ -71,30 +81,53 @@ fun EpisodeListItem(
     showPodcastImage: Boolean = true,
     showSummary: Boolean = false,
 ) {
-    Box(modifier = modifier.padding(vertical = 8.dp, horizontal = 16.dp)) {
-        Surface(
-            shape = MaterialTheme.shapes.large,
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            onClick = { onClick(episode) }
-        ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-            ) {
-                // Top Part
-                EpisodeListItemHeader(
-                    episode = episode,
-                    podcast = podcast,
-                    showPodcastImage = showPodcastImage,
-                    showSummary = showSummary,
-                    modifier = Modifier.padding(bottom = 8.dp)
+    val animatedVisibilityScope = LocalNavAnimatedVisibilityScope.current
+        ?: throw IllegalStateException("No AnimatedVisibilityScope")
+
+    val sharedTransitionScope = LocalSharedTransitionScope.current
+        ?: throw IllegalStateException("No SharedTransitionScope")
+
+    with(sharedTransitionScope) {
+        Box(
+            modifier = modifier
+                .padding(vertical = 8.dp, horizontal = 16.dp)
+                .sharedBounds(
+                    sharedContentState = rememberSharedContentState(
+                        key = EpisodeSharedElementKey(
+                            uri = episode.uri,
+                            type = EpisodeSharedElementType.BOUNDS
+                        )
+                    ),
+                    animatedVisibilityScope = animatedVisibilityScope
                 )
 
-                // Bottom Part
-                EpisodeListItemFooter(
-                    episode = episode,
-                    podcast = podcast,
-                    onQueueEpisode = onQueueEpisode,
-                )
+        ) {
+            Surface(
+                shape = MaterialTheme.shapes.large,
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                onClick = { onClick(episode) }
+            ) {
+                Column(
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                ) {
+                    // Top Part
+                    EpisodeListItemHeader(
+                        episode = episode,
+                        podcast = podcast,
+                        showPodcastImage = showPodcastImage,
+                        showSummary = showSummary,
+                        sharedTransitionScope = sharedTransitionScope,
+                        animatedVisibilityScope = animatedVisibilityScope,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+
+                    // Bottom Part
+                    EpisodeListItemFooter(
+                        episode = episode,
+                        podcast = podcast,
+                        onQueueEpisode = onQueueEpisode,
+                    )
+                }
             }
         }
     }
@@ -178,57 +211,102 @@ private fun EpisodeListItemFooter(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun EpisodeListItemHeader(
     episode: EpisodeInfo,
     podcast: PodcastInfo,
     showPodcastImage: Boolean,
     showSummary: Boolean,
-    modifier: Modifier = Modifier
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
+    modifier: Modifier = Modifier,
 ) {
-    Row(modifier = modifier) {
-        Column(
-            modifier =
-            Modifier
-                .weight(1f)
-                .padding(end = 16.dp)
-        ) {
-            Text(
-                text = episode.title,
-                maxLines = 2,
-                minLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(vertical = 2.dp)
-            )
+    with(sharedTransitionScope) {
+        Row(modifier = modifier) {
+            Column(
+                modifier =
+                Modifier
+                    .weight(1f)
+                    .padding(end = 16.dp)
+            ) {
+                Text(
+                    text = episode.title,
+                    maxLines = 2,
+                    minLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier
+                        .padding(vertical = 2.dp)
+                        .sharedBounds(
+                            sharedContentState = rememberSharedContentState(
+                                key = EpisodeSharedElementKey(
+                                    uri = episode.uri,
+                                    type = EpisodeSharedElementType.TITLE
+                                )
+                            ),
+                            animatedVisibilityScope = animatedVisibilityScope
+                        )
+                )
 
-            if (showSummary) {
-                HtmlTextContainer(text = episode.summary) {
+                if (showSummary) {
+                    HtmlTextContainer(text = episode.summary) {
+                        Text(
+                            text = it,
+                            maxLines = 2,
+                            minLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            style = MaterialTheme.typography.titleSmall,
+//                            modifier = Modifier
+//                                .sharedBounds(
+//                                    sharedContentState = rememberSharedContentState(
+//                                        key = EpisodeSharedElementKey(
+//                                            uri = episode.uri,
+//                                            type = EpisodeSharedElementType.SUMMARY
+//                                        )
+//                                    ),
+//                                    animatedVisibilityScope = animatedVisibilityScope
+//                                )
+                        )
+                    }
+                } else {
                     Text(
-                        text = it,
+                        text = podcast.title,
                         maxLines = 2,
                         minLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.titleSmall,
+                        modifier = Modifier
+                            .sharedBounds(
+                                sharedContentState = rememberSharedContentState(
+                                    key = EpisodeSharedElementKey(
+                                        uri = episode.uri,
+                                        type = EpisodeSharedElementType.PODCAST_TITLE
+                                    )
+                                ),
+                                animatedVisibilityScope = animatedVisibilityScope
+                            )
                     )
                 }
-            } else {
-                Text(
-                    text = podcast.title,
-                    maxLines = 2,
-                    minLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    style = MaterialTheme.typography.titleSmall,
+            }
+            if (showPodcastImage) {
+                EpisodeListItemImage(
+                    podcast = podcast,
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(Color.Blue)
+                        .sharedBounds(
+                            sharedContentState = rememberSharedContentState(
+                                key = EpisodeSharedElementKey(
+                                    uri = podcast.imageUrl,
+                                    type = EpisodeSharedElementType.IMAGE
+                                )
+                            ),
+                            animatedVisibilityScope = animatedVisibilityScope
+                        )
                 )
             }
-        }
-        if (showPodcastImage) {
-            EpisodeListItemImage(
-                podcast = podcast,
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(MaterialTheme.shapes.medium)
-            )
         }
     }
 }
@@ -257,7 +335,7 @@ private fun EpisodeListItemImage(
 )
 @Composable
 private fun EpisodeListItemPreview() {
-    JetcasterTheme {
+    JetCasterPreviewWrapper {
         EpisodeListItem(
             episode = PreviewEpisodes[0],
             podcast = PreviewPodcasts[0],
