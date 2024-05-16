@@ -27,7 +27,7 @@ val LocalSharedTransitionScope = compositionLocalOf<SharedTransitionScope?> { nu
 val LocalNavAnimatedVisibilityScope = compositionLocalOf<AnimatedVisibilityScope?> { null }
 
 data class EpisodeSharedElementKey(
-    val uri: String,
+    val id: String,
     val type: EpisodeSharedElementType
 )
 
@@ -35,6 +35,6 @@ enum class EpisodeSharedElementType {
     IMAGE,
     TITLE,
     PODCAST_TITLE,
-    SUMMARY,
+    BACKGROUND,
     BOUNDS
 }

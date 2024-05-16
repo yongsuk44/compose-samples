@@ -17,6 +17,10 @@
 package com.example.jetcaster.ui.player
 
 import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -210,6 +214,7 @@ private fun PlayerBackground(
     )
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun PlayerContentWithBackground(
     uiState: PlayerUiState,
@@ -221,22 +226,47 @@ fun PlayerContentWithBackground(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues(0.dp)
 ) {
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
-        PlayerBackground(
-            episode = uiState.episodePlayerState.currentEpisode,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(contentPadding)
-        )
-        PlayerContent(
-            uiState = uiState,
-            windowSizeClass = windowSizeClass,
-            displayFeatures = displayFeatures,
-            onBackPress = onBackPress,
-            onAddToQueue = onAddToQueue,
-            playerControlActions = playerControlActions,
-        )
-    }
+//    val animatedVisibilityScope = LocalNavAnimatedVisibilityScope.current
+//        ?: throw IllegalStateException("No AnimatedVisibilityScope")
+//
+//    val sharedTransitionScope = LocalSharedTransitionScope.current
+//        ?: throw IllegalStateException("No SharedTransitionScope")
+//
+//    with(sharedTransitionScope) {
+//    }
+        Box(
+            modifier = modifier,
+//            modifier = modifier.sharedBounds(
+//                sharedContentState = rememberSharedContentState(
+//                    key = "bounds"
+//                ),
+//                animatedVisibilityScope = animatedVisibilityScope
+//            ),
+            contentAlignment = Alignment.Center
+        ) {
+            PlayerBackground(
+                episode = uiState.episodePlayerState.currentEpisode,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(contentPadding)
+//                    .sharedBounds(
+//                        sharedContentState = rememberSharedContentState(
+//                            key = "background"
+//                        ),
+//                        animatedVisibilityScope = animatedVisibilityScope
+//                    )
+            )
+
+            PlayerContent(
+                uiState = uiState,
+                windowSizeClass = windowSizeClass,
+                displayFeatures = displayFeatures,
+                onBackPress = onBackPress,
+                onAddToQueue = onAddToQueue,
+                playerControlActions = playerControlActions,
+            )
+        }
+
 }
 
 /**
@@ -347,129 +377,67 @@ fun PlayerContent(
 /**
  * The UI for the top pane of a tabletop layout.
  */
-@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun PlayerContentRegular(
     uiState: PlayerUiState,
     onBackPress: () -> Unit,
     onAddToQueue: () -> Unit,
     playerControlActions: PlayerControlActions,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     val playerEpisode = uiState.episodePlayerState
     val currentEpisode = playerEpisode.currentEpisode ?: return
 
-    val animatedVisibilityScope = LocalNavAnimatedVisibilityScope.current
-        ?: throw IllegalStateException("No AnimatedVisibilityScope")
-
-    val sharedTransitionScope = LocalSharedTransitionScope.current
-        ?: throw IllegalStateException("No SharedTransitionScope")
-
-    with(sharedTransitionScope) {
-        Column(
-            modifier = modifier
-                .fillMaxSize()
-                .verticalGradientScrim(
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.50f),
-                    startYPercentage = 1f,
-                    endYPercentage = 0f
-                )
-                .systemBarsPadding()
-                .padding(horizontal = 8.dp)
-                .sharedBounds(
-                    sharedContentState = rememberSharedContentState(
-                        key = EpisodeSharedElementKey(
-                            uri = currentEpisode.uri,
-                            type = EpisodeSharedElementType.BOUNDS
-                        )
-                    ),
-                    animatedVisibilityScope = animatedVisibilityScope
-                )
-        ) {
-            TopAppBar(
-                onBackPress = onBackPress,
-                onAddToQueue = onAddToQueue,
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .verticalGradientScrim(
+                color = MaterialTheme.colorScheme.primary.copy(alpha = 0.50f),
+                startYPercentage = 1f,
+                endYPercentage = 0f
             )
+            .systemBarsPadding()
+            .padding(horizontal = 8.dp)
+    ) {
+        TopAppBar(
+            onBackPress = onBackPress,
+            onAddToQueue = onAddToQueue,
+        )
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(horizontal = 8.dp)
+        ) {
+            Spacer(modifier = Modifier.weight(1f))
+            PlayerImage(
+                currentEpisode = currentEpisode,
+                modifier = Modifier.weight(10f)
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+            PodcastDescription(currentEpisode = currentEpisode)
+            Spacer(modifier = Modifier.height(32.dp))
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.padding(horizontal = 8.dp)
+                modifier = Modifier.weight(10f)
             ) {
-                Spacer(modifier = Modifier.weight(1f))
-                PlayerImage(
-                    podcastImageUrl = currentEpisode.podcastImageUrl,
-                    modifier = Modifier
-                        .weight(10f)
-                        .sharedBounds(
-                            sharedContentState = rememberSharedContentState(
-                                key = EpisodeSharedElementKey(
-                                    uri = currentEpisode.podcastImageUrl,
-                                    type = EpisodeSharedElementType.IMAGE
-                                )
-                            ),
-                            animatedVisibilityScope = animatedVisibilityScope
-
-                        )
+                PlayerSlider(
+                    timeElapsed = playerEpisode.timeElapsed,
+                    episodeDuration = currentEpisode.duration,
+                    onSeekingStarted = playerControlActions.onSeekingStarted,
+                    onSeekingFinished = playerControlActions.onSeekingFinished
                 )
-                Spacer(modifier = Modifier.height(32.dp))
-//                PodcastDescription(currentEpisode.title, currentEpisode.podcastName)
-                Text(
-                    text = currentEpisode.title,
-                    style = MaterialTheme.typography.headlineSmall,
-                    maxLines = 1,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.basicMarquee()
-                        .sharedBounds(
-                            sharedContentState = rememberSharedContentState(
-                                key = EpisodeSharedElementKey(
-                                    uri = currentEpisode.uri,
-                                    type = EpisodeSharedElementType.TITLE
-                                )
-                            ),
-                            animatedVisibilityScope = animatedVisibilityScope
-
-                        )
+                PlayerButtons(
+                    hasNext = playerEpisode.queue.isNotEmpty(),
+                    isPlaying = playerEpisode.isPlaying,
+                    onPlayPress = playerControlActions.onPlayPress,
+                    onPausePress = playerControlActions.onPausePress,
+                    onAdvanceBy = playerControlActions.onAdvanceBy,
+                    onRewindBy = playerControlActions.onRewindBy,
+                    onNext = playerControlActions.onNext,
+                    onPrevious = playerControlActions.onPrevious,
+                    Modifier.padding(vertical = 8.dp)
                 )
-                Text(
-                    text = currentEpisode.podcastName,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    modifier = Modifier.sharedBounds(
-                        sharedContentState = rememberSharedContentState(
-                            key = EpisodeSharedElementKey(
-                                uri = currentEpisode.uri,
-                                type = EpisodeSharedElementType.PODCAST_TITLE
-                            )
-                        ),
-                        animatedVisibilityScope = animatedVisibilityScope
-
-                    )
-                )
-                Spacer(modifier = Modifier.height(32.dp))
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.weight(10f)
-                ) {
-                    PlayerSlider(
-                        timeElapsed = playerEpisode.timeElapsed,
-                        episodeDuration = currentEpisode.duration,
-                        onSeekingStarted = playerControlActions.onSeekingStarted,
-                        onSeekingFinished = playerControlActions.onSeekingFinished
-                    )
-                    PlayerButtons(
-                        hasNext = playerEpisode.queue.isNotEmpty(),
-                        isPlaying = playerEpisode.isPlaying,
-                        onPlayPress = playerControlActions.onPlayPress,
-                        onPausePress = playerControlActions.onPausePress,
-                        onAdvanceBy = playerControlActions.onAdvanceBy,
-                        onRewindBy = playerControlActions.onRewindBy,
-                        onNext = playerControlActions.onNext,
-                        onPrevious = playerControlActions.onPrevious,
-                        Modifier.padding(vertical = 8.dp)
-                    )
-                }
-                Spacer(modifier = Modifier.weight(1f))
             }
+            Spacer(modifier = Modifier.weight(1f))
         }
     }
 }
@@ -500,7 +468,7 @@ private fun PlayerContentTableTopTop(
             .padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        PlayerImage(episode.podcastImageUrl)
+        PlayerImage(episode)
     }
 }
 
@@ -533,8 +501,7 @@ private fun PlayerContentTableTopBottom(
             onAddToQueue = onAddToQueue,
         )
         PodcastDescription(
-            title = episode.title,
-            podcastName = episode.podcastName,
+            currentEpisode = episode,
             titleTextStyle = MaterialTheme.typography.titleLarge
         )
         Spacer(modifier = Modifier.weight(0.5f))
@@ -610,7 +577,7 @@ private fun PlayerContentBookEnd(
         verticalArrangement = Arrangement.SpaceAround,
     ) {
         PlayerImage(
-            podcastImageUrl = episode.podcastImageUrl,
+            currentEpisode = episode,
             modifier = Modifier
                 .padding(vertical = 16.dp)
                 .weight(1f)
@@ -663,47 +630,76 @@ private fun TopAppBar(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun PlayerImage(
-    podcastImageUrl: String,
+    currentEpisode: PlayerEpisode,
     modifier: Modifier = Modifier
 ) {
-    AsyncImage(
-        model = ImageRequest.Builder(LocalContext.current)
-            .data(podcastImageUrl)
-            .crossfade(true)
-            .memoryCacheKey(podcastImageUrl)
-            .placeholderMemoryCacheKey(podcastImageUrl)
-            .build(),
-        contentDescription = null,
-        contentScale = ContentScale.Crop,
-        modifier = modifier
-            .sizeIn(maxWidth = 500.dp, maxHeight = 500.dp)
-            .aspectRatio(1f)
-            .clip(MaterialTheme.shapes.medium)
-    )
+    val animatedVisibilityScope = LocalNavAnimatedVisibilityScope.current!!
+    val sharedTransitionScope = LocalSharedTransitionScope.current!!
+
+    with(sharedTransitionScope) {
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(currentEpisode.podcastImageUrl)
+                .crossfade(true)
+//                .memoryCacheKey("image")
+//                .placeholderMemoryCacheKey("image")
+                .build(),
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = modifier
+                .sizeIn(maxWidth = 500.dp, maxHeight = 500.dp)
+                .aspectRatio(1f)
+                .sharedElement(
+                    rememberSharedContentState(
+                        key = "image"
+                    ),
+                    animatedVisibilityScope = animatedVisibilityScope
+                )
+                .clip(MaterialTheme.shapes.medium),
+        )
+    }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalSharedTransitionApi::class)
 @Composable
 private fun PodcastDescription(
-    title: String,
-    podcastName: String,
+    currentEpisode: PlayerEpisode,
     titleTextStyle: TextStyle = MaterialTheme.typography.headlineSmall
 ) {
-    Text(
-        text = title,
-        style = titleTextStyle,
-        maxLines = 1,
-        color = MaterialTheme.colorScheme.onSurface,
-        modifier = Modifier.basicMarquee()
-    )
-    Text(
-        text = podcastName,
-        style = MaterialTheme.typography.bodyMedium,
-        color = MaterialTheme.colorScheme.onSurface,
-        maxLines = 1
-    )
+    val animatedVisibilityScope = LocalNavAnimatedVisibilityScope.current!!
+    val sharedTransitionScope = LocalSharedTransitionScope.current!!
+
+    with(sharedTransitionScope) {
+        Text(
+            text = currentEpisode.title,
+            style = titleTextStyle,
+            maxLines = 1,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier
+                .basicMarquee()
+                .sharedElement(
+                    rememberSharedContentState(
+                        key = "title"
+                    ),
+                    animatedVisibilityScope = animatedVisibilityScope,
+                )
+        )
+        Text(
+            text = currentEpisode.podcastName,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            modifier = Modifier.sharedElement(
+                rememberSharedContentState(
+                    key = "podcastTitle"
+                ),
+                animatedVisibilityScope = animatedVisibilityScope,
+            )
+        )
+    }
 }
 
 @Composable

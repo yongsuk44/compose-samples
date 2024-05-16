@@ -17,9 +17,13 @@
 package com.example.jetcaster.ui.shared
 
 import android.content.res.Configuration
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -34,6 +38,8 @@ import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.rounded.PlayCircleFilled
 import androidx.compose.material.ripple.rememberRipple
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -47,8 +53,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -56,8 +60,6 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.jetcaster.R
 import com.example.jetcaster.core.domain.testing.PreviewEpisodes
 import com.example.jetcaster.core.domain.testing.PreviewPodcasts
@@ -70,7 +72,6 @@ import com.example.jetcaster.ui.tooling.JetCasterPreviewWrapper
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 
-@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun EpisodeListItem(
     episode: EpisodeInfo,
@@ -81,55 +82,29 @@ fun EpisodeListItem(
     showPodcastImage: Boolean = true,
     showSummary: Boolean = false,
 ) {
-    val animatedVisibilityScope = LocalNavAnimatedVisibilityScope.current
-        ?: throw IllegalStateException("No AnimatedVisibilityScope")
+    Card(
+        shape = MaterialTheme.shapes.large,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        ),
+        onClick = { onClick(episode) },
+        modifier = modifier.padding(vertical = 8.dp, horizontal = 16.dp)
+    ) {
+        // Top Part
+        EpisodeListItemHeader(
+            episode = episode,
+            podcast = podcast,
+            showPodcastImage = showPodcastImage,
+            showSummary = showSummary,
+            modifier = Modifier.padding(bottom = 8.dp)
+        )
 
-    val sharedTransitionScope = LocalSharedTransitionScope.current
-        ?: throw IllegalStateException("No SharedTransitionScope")
-
-    with(sharedTransitionScope) {
-        Box(
-            modifier = modifier
-                .padding(vertical = 8.dp, horizontal = 16.dp)
-                .sharedBounds(
-                    sharedContentState = rememberSharedContentState(
-                        key = EpisodeSharedElementKey(
-                            uri = episode.uri,
-                            type = EpisodeSharedElementType.BOUNDS
-                        )
-                    ),
-                    animatedVisibilityScope = animatedVisibilityScope
-                )
-
-        ) {
-            Surface(
-                shape = MaterialTheme.shapes.large,
-                color = MaterialTheme.colorScheme.surfaceContainer,
-                onClick = { onClick(episode) }
-            ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                ) {
-                    // Top Part
-                    EpisodeListItemHeader(
-                        episode = episode,
-                        podcast = podcast,
-                        showPodcastImage = showPodcastImage,
-                        showSummary = showSummary,
-                        sharedTransitionScope = sharedTransitionScope,
-                        animatedVisibilityScope = animatedVisibilityScope,
-                        modifier = Modifier.padding(bottom = 8.dp)
-                    )
-
-                    // Bottom Part
-                    EpisodeListItemFooter(
-                        episode = episode,
-                        podcast = podcast,
-                        onQueueEpisode = onQueueEpisode,
-                    )
-                }
-            }
-        }
+        // Bottom Part
+        EpisodeListItemFooter(
+            episode = episode,
+            podcast = podcast,
+            onQueueEpisode = onQueueEpisode,
+        )
     }
 }
 
@@ -218,15 +193,15 @@ private fun EpisodeListItemHeader(
     podcast: PodcastInfo,
     showPodcastImage: Boolean,
     showSummary: Boolean,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier,
 ) {
+    val animatedVisibilityScope = LocalNavAnimatedVisibilityScope.current!!
+    val sharedTransitionScope = LocalSharedTransitionScope.current!!
+
     with(sharedTransitionScope) {
         Row(modifier = modifier) {
             Column(
-                modifier =
-                Modifier
+                modifier = Modifier
                     .weight(1f)
                     .padding(end = 16.dp)
             ) {
@@ -238,14 +213,11 @@ private fun EpisodeListItemHeader(
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier
                         .padding(vertical = 2.dp)
-                        .sharedBounds(
-                            sharedContentState = rememberSharedContentState(
-                                key = EpisodeSharedElementKey(
-                                    uri = episode.uri,
-                                    type = EpisodeSharedElementType.TITLE
-                                )
+                        .sharedElement(
+                            rememberSharedContentState(
+                                key = "title"
                             ),
-                            animatedVisibilityScope = animatedVisibilityScope
+                            animatedVisibilityScope = animatedVisibilityScope,
                         )
                 )
 
@@ -257,16 +229,6 @@ private fun EpisodeListItemHeader(
                             minLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             style = MaterialTheme.typography.titleSmall,
-//                            modifier = Modifier
-//                                .sharedBounds(
-//                                    sharedContentState = rememberSharedContentState(
-//                                        key = EpisodeSharedElementKey(
-//                                            uri = episode.uri,
-//                                            type = EpisodeSharedElementType.SUMMARY
-//                                        )
-//                                    ),
-//                                    animatedVisibilityScope = animatedVisibilityScope
-//                                )
                         )
                     }
                 } else {
@@ -277,14 +239,11 @@ private fun EpisodeListItemHeader(
                         overflow = TextOverflow.Ellipsis,
                         style = MaterialTheme.typography.titleSmall,
                         modifier = Modifier
-                            .sharedBounds(
-                                sharedContentState = rememberSharedContentState(
-                                    key = EpisodeSharedElementKey(
-                                        uri = episode.uri,
-                                        type = EpisodeSharedElementType.PODCAST_TITLE
-                                    )
+                            .sharedElement(
+                                rememberSharedContentState(
+                                    key = "podcastTitle"
                                 ),
-                                animatedVisibilityScope = animatedVisibilityScope
+                                animatedVisibilityScope = animatedVisibilityScope,
                             )
                     )
                 }
@@ -294,17 +253,13 @@ private fun EpisodeListItemHeader(
                     podcast = podcast,
                     modifier = Modifier
                         .size(56.dp)
-                        .clip(MaterialTheme.shapes.medium)
-                        .background(Color.Blue)
-                        .sharedBounds(
-                            sharedContentState = rememberSharedContentState(
-                                key = EpisodeSharedElementKey(
-                                    uri = podcast.imageUrl,
-                                    type = EpisodeSharedElementType.IMAGE
-                                )
+                        .sharedElement(
+                            rememberSharedContentState(
+                                key = "image"
                             ),
                             animatedVisibilityScope = animatedVisibilityScope
                         )
+                        .clip(MaterialTheme.shapes.medium),
                 )
             }
         }
@@ -314,7 +269,7 @@ private fun EpisodeListItemHeader(
 @Composable
 private fun EpisodeListItemImage(
     podcast: PodcastInfo,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
 ) {
     PodcastImage(
         podcastImageUrl = podcast.imageUrl,

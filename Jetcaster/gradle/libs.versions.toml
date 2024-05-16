@@ -10,7 +10,7 @@ androidx-appcompat = "1.6.1"
 androidx-benchmark = "1.2.4"
 androidx-benchmark-junit4 = "1.2.4"
 androidx-compose-bom = "2024.05.00"
-androidx-compose-latest = "1.7.0-alpha08"
+androidx-compose-latest = "1.7.0-beta01"
 androidx-compose-material3-adaptive = "1.0.0-alpha12"
 androidx-constraintlayout = "1.0.1"
 androidx-core-splashscreen = "1.0.1"
@@ -79,8 +79,8 @@ androidx-benchmark-macrobenchmark = { module = "androidx.benchmark:benchmark-mac
 androidx-benchmark-macrobenchmark-junit4 = { module = "androidx.benchmark:benchmark-macro-junit4", version.ref = "androidx-benchmark-junit4" }
 androidx-compose-animation = { module = "androidx.compose.animation:animation", version.ref = "androidx-compose-latest" }
 androidx-compose-bom = { module = "androidx.compose:compose-bom", version.ref = "androidx-compose-bom" }
-androidx-compose-foundation = { module = "androidx.compose.foundation:foundation" }
-androidx-compose-foundation-layout = { module = "androidx.compose.foundation:foundation-layout" }
+androidx-compose-foundation = { module = "androidx.compose.foundation:foundation", version.ref = "androidx-compose-latest" }
+androidx-compose-foundation-layout = { module = "androidx.compose.foundation:foundation-layout", version.ref = "androidx-compose-latest" }
 androidx-compose-material = { module = "androidx.compose.material:material" }
 androidx-compose-material-iconsExtended = { module = "androidx.compose.material:material-icons-extended" }
 androidx-compose-material3 = { module = "androidx.compose.material3:material3" }

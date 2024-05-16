@@ -60,16 +60,15 @@ fun PodcastImage(
         model = ImageRequest.Builder(LocalContext.current)
             .data(podcastImageUrl)
             .crossfade(true)
-            .memoryCacheKey(podcastImageUrl)
-            .placeholderMemoryCacheKey(podcastImageUrl)
-            .placeholder(R.drawable.img_empty)
+//            .memoryCacheKey("image")
+//            .placeholderMemoryCacheKey("image")
             .build(),
         contentScale = contentScale,
         onState = { state -> imagePainterState = state }
     )
 
     Box(
-        modifier = modifier,
+        modifier = modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         when (imagePainterState) {
@@ -78,16 +77,12 @@ fun PodcastImage(
                 Image(
                     painter = painterResource(id = R.drawable.img_empty),
                     contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxSize()
                 )
             }
             else -> {
                 Box(
                     modifier = Modifier
                         .background(placeholderBrush)
-                        .fillMaxSize()
-
                 )
             }
         }
@@ -96,7 +91,6 @@ fun PodcastImage(
             painter = imageLoader,
             contentDescription = contentDescription,
             contentScale = contentScale,
-            modifier = modifier,
         )
     }
 }
