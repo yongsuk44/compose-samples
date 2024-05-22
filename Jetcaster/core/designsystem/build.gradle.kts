@@ -1,6 +1,7 @@
 plugins {
   alias(libs.plugins.android.library)
   alias(libs.plugins.kotlin.android)
+  alias(libs.plugins.compose.compiler)
 }
 
 // TODO(chris): Set up convention plugin
@@ -25,10 +26,6 @@ android {
   buildFeatures {
     compose = true
     buildConfig = true
-  }
-
-  composeOptions {
-    kotlinCompilerExtensionVersion = libs.versions.compose.compiler.get()
   }
 
   compileOptions {
