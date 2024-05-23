@@ -18,7 +18,6 @@ package com.example.jetcaster.core.notification
 
 import android.os.Bundle
 import androidx.annotation.OptIn
-import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.session.CommandButton
 import androidx.media3.session.MediaSession
@@ -37,29 +36,25 @@ internal class CustomMediaSessionCallback : MediaSession.Callback {
             val sessionCommandBuilder =
                 MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon()
 
-            val playerCommand = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
-                .removeAll(
-                    Player.COMMAND_SEEK_TO_PREVIOUS,
-                    Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM,
-                    Player.COMMAND_SEEK_TO_NEXT,
-                    Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM,
-                )
-
             NotificationCommandButtons.entries.forEach { commandButton ->
                 commandButton.sessionCommand.apply(sessionCommandBuilder::add)
             }
 
             MediaSession.ConnectionResult.AcceptedResultBuilder(session)
                 .setAvailableSessionCommands(sessionCommandBuilder.build())
-                .setAvailablePlayerCommands(playerCommand.build())
                 .setCustomLayout(
-                    NotificationCommandButtons.entries.map {
-                        CommandButton.Builder()
-                            .setDisplayName(it.displayName)
-                            .setIconResId(it.iconResId(session.player.isPlaying))
-                            .setSessionCommand(it.sessionCommand)
-                            .build()
-                    }
+                    NotificationCommandButtons.entries
+                        .filter {
+                            it.customAction == NotificationCommandButtons.FAVORITE.customAction ||
+                                    it.customAction == NotificationCommandButtons.SEEK_REWIND.customAction ||
+                                    it.customAction == NotificationCommandButtons.SEEK_FORWARD.customAction
+                        }.map {
+                            CommandButton.Builder()
+                                .setDisplayName(it.displayName)
+                                .setIconResId(it.iconResId(session.player.isPlaying))
+                                .setSessionCommand(it.sessionCommand)
+                                .build()
+                        }
                 )
                 .build()
         } else {
@@ -101,7 +96,12 @@ internal class CustomMediaSessionCallback : MediaSession.Callback {
             NotificationCommandButtons.NEXT.customAction -> {
                 session.player.run {
                     if (hasNextMediaItem()) seekToNextMediaItem()
+                    else seekToNext()
                 }
+            }
+
+            NotificationCommandButtons.FAVORITE.customAction -> {
+                // TODO()
             }
 
             else -> {

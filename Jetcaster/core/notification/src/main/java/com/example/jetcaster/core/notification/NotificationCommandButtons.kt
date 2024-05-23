@@ -24,6 +24,7 @@ private const val ACTION_SEEK_REWIND = "action_seek_rewind"
 private const val ACTION_PLAY_AND_PAUSE = "action_play_and_pause"
 private const val ACTION_PREVIOUS = "action_previous"
 private const val ACTION_NEXT = "action_next"
+private const val ACTION_FAVORITE = "action_favorite"
 
 enum class NotificationCommandButtons(
     val customAction: String,
@@ -66,5 +67,11 @@ enum class NotificationCommandButtons(
         displayName = "Next",
         iconResId = { androidx.media3.session.R.drawable.media3_notification_seek_to_next },
         sessionCommand = SessionCommand(ACTION_NEXT, Bundle.EMPTY)
-    );
+    ),
+    FAVORITE(
+        customAction = ACTION_FAVORITE,
+        displayName = "Favorite",
+        iconResId = { R.drawable.ic_favorite },
+        sessionCommand = SessionCommand(ACTION_FAVORITE, Bundle.EMPTY)
+    ),
 }
